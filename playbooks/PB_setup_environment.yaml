@@ -13,4 +13,4 @@
 
     - name: Setup Netbox Container on Server
       ansible.builtin.include_role:
-        name: install_netbox_and_ipfabricplugin
+        name: install_netbox_with_ipfabricplugin
