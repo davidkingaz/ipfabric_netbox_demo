@@ -1,0 +1,91 @@
+---
+- name: Ensure projects directory exists
+  ansible.builtin.file:
+    path: "/home/adminuser/projects"
+    state: directory
+    mode: '0755'
+    owner: adminuser
+    group: adminuser
+
+- name: Clone the netbox-docker repository
+  ansible.builtin.git:
+    repo: "{{ netbox_repo }}"
+    dest: "{{ netbox_directory }}"
+    version: "{{ netbox_branch }}"
+    force: true
+
+- name: Ensure ownership of the netbox-docker directory
+  ansible.builtin.file:
+    path: "{{ netbox_directory }}"
+    state: directory
+    owner: adminuser
+    group: adminuser
+    recurse: true
+
+- name: Copy Dockerfile-Plugins to the remote host
+  ansible.builtin.copy:
+    src: "{{ role_path }}/netboxfiles/Dockerfile-Plugins"
+    dest: "{{ netbox_directory }}/Dockerfile-Plugins"
+    mode: '0644'
+    owner: adminuser
+    group: adminuser
+
+- name: Copy docker-compose.override.yml to the remote host
+  ansible.builtin.copy:
+    src: "{{ role_path }}/netboxfiles/docker-compose.override.yml"
+    dest: "{{ netbox_directory }}/docker-compose.override.yml"
+    mode: '0644'
+    owner: adminuser
+    group: adminuser
+
+- name: Copy plugin_requirements.txt to the remote host
+  ansible.builtin.copy:
+    src: "{{ role_path }}/netboxfiles/plugin_requirements.txt"
+    dest: "{{ netbox_directory }}/plugin_requirements.txt"
+    mode: '0644'
+    owner: adminuser
+    group: adminuser
+
+- name: Update PLUGINS entry in configuration/plugins.py
+  ansible.builtin.blockinfile:
+    path: "/home/adminuser/projects/netbox-docker/configuration/plugins.py"
+    block: |
+      PLUGINS = ["ipfabric_netbox"]
+    marker: "# {mark}"
+    insertbefore: '^# PLUGINS = \["netbox_bgp"\]'
+    owner: adminuser
+    group: adminuser
+    backup: false
+
+- name: Build Docker images
+  community.docker.docker_compose_v2:
+    project_src: "{{ netbox_directory }}"
+    build: always
+    pull: missing
+
+- name: Start all required Docker containers
+  community.docker.docker_compose_v2:
+    project_src: "{{ netbox_directory }}"
+    state: present
+  register: output
+
+- name: Show results
+  ansible.builtin.debug:
+    var: output
+
+# - name: Create the first admin user
+#   ansible.builtin.shell: |
+#     set -o pipefail
+#     docker compose exec netbox /opt/netbox/netbox/manage.py createsuperuser --no-input \
+#     --username "{{ admin_username }}" --email "admin@example.com" || true
+#     docker compose exec netbox bash -c "echo \"from django.contrib.auth import get_user_model; \
+#     User = get_user_model(); user = User.objects.get(username='{{ admin_username }}'); \
+#     user.set_password('{{ admin_password }}'); user.save()\" | python /opt/netbox/netbox/manage.py shell"
+#   args:
+#     chdir: "{{ netbox_directory }}"
+#   changed_when: false
+
+# - name: Print admin user creation output
+#   ansible.builtin.debug:
+#     var: superuser_creation.stdout
+#   when: superuser_creation is defined and superuser_creation.stdout != ""

@@ -1,0 +1,4 @@
+---
+netbox_repo: "https://github.com/netbox-community/netbox-docker.git"
+netbox_branch: "release"
+netbox_directory: "/home/adminuser/projects/netbox-docker"

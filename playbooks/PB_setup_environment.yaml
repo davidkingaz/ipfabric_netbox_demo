@@ -1,0 +1,16 @@
+---
+- name: Setup Environment onto Linux Server
+  hosts: linux04
+  gather_facts: false
+  remote_user: "adminuser"
+  connection: ssh
+  become: true
+
+  tasks:
+    - name: Setup Docker Container Engine on Server
+      ansible.builtin.include_role:
+        name: install_docker
+
+    - name: Setup Netbox Container on Server
+      ansible.builtin.include_role:
+        name: install_netbox_and_ipfabricplugin

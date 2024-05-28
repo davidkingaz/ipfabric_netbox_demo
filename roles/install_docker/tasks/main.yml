@@ -12,23 +12,31 @@
     state: present
     update_cache: true
 
+- name: Install Docker SDK for Python
+  ansible.builtin.pip:
+    name:
+      - docker==5.0.3
+      - docker-compose==1.29.2
+    state: present
+
 - name: Create directory for Docker's GPG key
   ansible.builtin.file:
     path: /etc/apt/keyrings
     state: directory
     mode: '0755'
 
-- name: Add Docker GPG apt Key
-  ansible.builtin.apt_key:
+- name: Download Docker GPG key
+  ansible.builtin.get_url:
     url: https://download.docker.com/linux/ubuntu/gpg
-    keyring: /etc/apt/keyrings/docker.gpg
-    state: present
+    dest: /etc/apt/keyrings/docker.gpg
+    mode: '0644'
+  become: true
 
 - name: Add Docker Repository
   ansible.builtin.apt_repository:
-    repo: deb https://download.docker.com/linux/ubuntu focal stable
-    filename: docker
+    repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu focal stable"
     state: present
+  become: true
 
 - name: Install Docker and related packages
   ansible.builtin.apt:
